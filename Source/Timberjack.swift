@@ -28,6 +28,32 @@ public enum Style {
     case Light
 }
 
+extension NSURLRequest {
+    func httpBodyData() -> NSData? {
+        if let stream = HTTPBodyStream {
+            let data = NSMutableData()
+            stream.open()
+            let bufferSize = 4096
+            let buffer = UnsafeMutablePointer<UInt8>.alloc(bufferSize)
+            while stream.hasBytesAvailable {
+                let bytesRead = stream.read(buffer, maxLength: bufferSize)
+                if bytesRead > 0 {
+                    let readData = NSData(bytes: buffer, length: bytesRead)
+                    data.appendData(readData)
+                } else if bytesRead < 0 {
+                    print("error occured while reading HTTPBodyStream: \(bytesRead)")
+                } else {
+                    break
+                }
+            }
+            stream.close()
+            return data
+        } else {
+            return HTTPBody
+        }
+    }
+}
+
 public class Timberjack: NSURLProtocol {
     var connection: NSURLConnection?
     var data: NSMutableData?
@@ -146,6 +172,13 @@ public class Timberjack: NSURLProtocol {
         if Timberjack.logStyle == .Verbose {
             if let headers = request.allHTTPHeaderFields {
                 self.logHeaders(headers)
+            }
+            if let body = request.httpBodyData() where body.length > 0 {
+                if let stringBody = NSString(data: body, encoding: NSUTF8StringEncoding) {
+                    print("Body: [")
+                    print(stringBody)
+                    print("]")
+                }
             }
         }
     }
