@@ -28,6 +28,9 @@ public enum Style {
     case light
 }
 
+
+public typealias TimberjackPrint = ((String) -> Void)
+
 extension URLRequest {
     func httpBodyData() -> Data? {
         if let stream = httpBodyStream {
@@ -41,7 +44,7 @@ extension URLRequest {
                     let readData = Data(bytes: buffer, count: bytesRead)
                     data.append(readData as Data)
                 } else if bytesRead < 0 {
-                    print("error occured while reading HTTPBodyStream: \(bytesRead)")
+                    Timberjack.printLog("error occured while reading HTTPBodyStream: \(bytesRead)")
                 } else {
                     break
                 }
@@ -60,6 +63,10 @@ open class Timberjack: URLProtocol {
     var data: NSMutableData?
     var response: URLResponse?
     var newRequest: NSMutableURLRequest?
+    
+    open static var printLog: TimberjackPrint = { log in
+        print(log)
+    }
     
     open static var logStyle: Style = .verbose
     
@@ -144,21 +151,21 @@ open class Timberjack: URLProtocol {
     //MARK: - Logging
     
     open func logDivider() {
-        print("---------------------")
+        Timberjack.printLog("---------------------")
     }
     
     open func logError(_ error: NSError) {
         logDivider()
         
-        print("Error: \(error.localizedDescription)")
+        Timberjack.printLog("Error: \(error.localizedDescription)")
         
         if Timberjack.logStyle == .verbose {
             if let reason = error.localizedFailureReason {
-                print("Reason: \(reason)")
+                Timberjack.printLog("Reason: \(reason)")
             }
             
             if let suggestion = error.localizedRecoverySuggestion {
-                print("Suggestion: \(suggestion)")
+                Timberjack.printLog("Suggestion: \(suggestion)")
             }
         }
     }
@@ -167,7 +174,7 @@ open class Timberjack: URLProtocol {
         logDivider()
         
         if let url = request.url?.absoluteString {
-            print("Request: \(request.httpMethod!) \(url)")
+            Timberjack.printLog("Request: \(request.httpMethod!) \(url)")
         }
         
         if Timberjack.logStyle == .verbose {
@@ -176,9 +183,9 @@ open class Timberjack: URLProtocol {
             }
             if let body = request.httpBodyData() , body.count > 0 {
                 if let stringBody = String(data: body, encoding: String.Encoding.utf8) {
-                    print("Body: [")
-                    print(stringBody)
-                    print("]")
+                    Timberjack.printLog("Body: [")
+                    Timberjack.printLog(stringBody)
+                    Timberjack.printLog("]")
                 }
             }
         }
@@ -188,12 +195,12 @@ open class Timberjack: URLProtocol {
         logDivider()
         
         if let url = response.url?.absoluteString {
-            print("Response: \(url)")
+            Timberjack.printLog("Response: \(url)")
         }
         
         if let httpResponse = response as? HTTPURLResponse {
             let localisedStatus = HTTPURLResponse.localizedString(forStatusCode: httpResponse.statusCode).capitalized
-            print("Status: \(httpResponse.statusCode) - \(localisedStatus)")
+            Timberjack.printLog("Status: \(httpResponse.statusCode) - \(localisedStatus)")
         }
         
         if Timberjack.logStyle == .verbose {
@@ -203,7 +210,7 @@ open class Timberjack: URLProtocol {
             
             if let startDate = Timberjack.property(forKey: TimberjackRequestTimeKey, in: newRequest! as URLRequest) as? Date {
                 let difference = fabs(startDate.timeIntervalSinceNow)
-                print("Duration: \(difference)s")
+                Timberjack.printLog("Duration: \(difference)s")
             }
             
             guard let data = data else { return }
@@ -213,23 +220,23 @@ open class Timberjack: URLProtocol {
                 let pretty = try JSONSerialization.data(withJSONObject: json, options: .prettyPrinted)
                 
                 if let string = NSString(data: pretty, encoding: String.Encoding.utf8.rawValue) {
-                    print("JSON: \(string)")
+                    Timberjack.printLog("JSON: \(string)")
                 }
             }
                 
             catch {
                 if let string = NSString(data: data, encoding: String.Encoding.utf8.rawValue) {
-                    print("Data: \(string)")
+                    Timberjack.printLog("Data: \(string)")
                 }
             }
         }
     }
     
     open func logHeaders(_ headers: [String: AnyObject]) {
-        print("Headers: [")
+        Timberjack.printLog("Headers: [")
         for (key, value) in headers {
-            print("  \(key) : \(value)")
+            Timberjack.printLog("  \(key) : \(value)")
         }
-        print("]")
+        Timberjack.printLog("]")
     }
 }
